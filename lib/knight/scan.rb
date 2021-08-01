@@ -1,4 +1,4 @@
-module WhatWeb
+module Knight
   class Scan
     def initialize(urls, input_file: nil, url_prefix: nil, url_suffix: nil, url_pattern: nil, max_threads: 25)
       urls = [urls] if urls.is_a?(String)
