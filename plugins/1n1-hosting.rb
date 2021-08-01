@@ -1,7 +1,7 @@
 Plugin.define do
     name "1&1 Hosting"
     authors [
-      "Krisna Pranav krisna.pranav@gmail.com", 
+      "Krisna Pranav", 
       "Andrew Horton", 
     ]
     version "0.2"
