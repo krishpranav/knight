@@ -1,66 +1,322 @@
 class PluginSupport
     def self.load_plugin(f)
-        load f
-    
+      load f
+  
     rescue ArgumentError => err
-        if err.message =~ /wrong number of arguments \(given 1, expected 0\)/
-            error("Error loading plugin #{f}. This plugin may be using a deprecated plugin format for knight version < 0.5.0. Error message: #{err.message}")
-        end
-        raise if $WWDEBUG == true
-    
-    rescue SyntaxError => err
-        error("Error loading plugin #{f}. Error details: #{err.message}")
-        raise if $WWDEBUG == true
-    
-    rescue Interrupts
-        error("Interrupt detected. Failed to load plugin #{f}.")
-        raise if $WWDEBUG == true
-        exit 1
-    end
+      if err.message =~ /wrong number of arguments \(given 1, expected 0\)/
 
+        error("Error loading plugin #{f}. This plugin may be using a deprecated plugin format for Knight version < 0.5.0. Error message: #{err.message}")
+      end
+      raise if $WWDEBUG == true
+  
+    rescue SyntaxError => err
+      error("Error loading plugin #{f}. Error details: #{err.message}")
+      raise if $WWDEBUG == true
+  
+    rescue Interrupt
+      error("Interrupt detected. Failed to load plugin #{f}.")
+      raise if $WWDEBUG == true
+      exit 1 
+    end
+  
     def self.precompile_regular_expressions
-        Plugin.registered_plugins.each do |thisplugin|
-          matches = thisplugin[1].matches
-          next if matches.nil?
-          matches.each do |thismatch|
-            unless thismatch[:regexp].nil?
-              # pp thismatch
-              thismatch[:regexp_compiled] = Regexp.new(thismatch[:regexp])
-            end
-    
-            [:version, :os, :string, :account, :model, :firmware, :module, :filepath].each do |label|
-              if !thismatch[label].nil? && thismatch[label].class == Regexp
-                thismatch[:regexp_compiled] = Regexp.new(thismatch[label])
-                # pp thismatch
-              end
-            end
-    
-            unless thismatch[:text].nil?
-              thismatch[:regexp_compiled] = Regexp.new(Regexp.escape(thismatch[:text]))
+      Plugin.registered_plugins.each do |thisplugin|
+        matches = thisplugin[1].matches
+        next if matches.nil?
+        matches.each do |thismatch|
+          unless thismatch[:regexp].nil?
+            thismatch[:regexp_compiled] = Regexp.new(thismatch[:regexp])
+          end
+  
+          [:version, :os, :string, :account, :model, :firmware, :module, :filepath].each do |label|
+            if !thismatch[label].nil? && thismatch[label].class == Regexp
+              thismatch[:regexp_compiled] = Regexp.new(thismatch[label])
+
             end
           end
+  
+          unless thismatch[:text].nil?
+            thismatch[:regexp_compiled] = Regexp.new(Regexp.escape(thismatch[:text]))
+          end
         end
+      end
     end
+  
 
     def self.load_plugins(list = nil)
-        a = []
-        b = []
-
-        plugin_dirs = PLUGIN_DIRS.clone
-        plugin_dirs.map { |p| p = File.expand_path(p) }
-
-        unless list
-            plugin_dirs.each do |d|
-              Dir.glob("#{d}/*.rb").each { |x| PluginSupport.load_plugin(x) }
-            end
-            return Plugin.registered_plugins
-          end
-        
-        list.split(',').each do |p|
-            choice = PluginChoice.new
-            choice.fill(p)
-            a << choice if choice.type == 'file'
-            b << choice if choice.type == 'plugin'
+      a = []
+      b = []
+  
+      plugin_dirs = PLUGIN_DIRS.clone
+      plugin_dirs.map { |p| p = File.expand_path(p) }
+  
+      unless list
+        plugin_dirs.each do |d|
+          Dir.glob("#{d}/*.rb").each { |x| PluginSupport.load_plugin(x) }
         end
+        return Plugin.registered_plugins
+      end
+  
+  
+      list.split(',').each do |p|
+        choice = PluginChoice.new
+        choice.fill(p)
+        a << choice if choice.type == 'file'
+        b << choice if choice.type == 'plugin'
+      end
+  
+      a = a.sort
+  
+      plugin_dirs = [] if a.map(&:modifier).include?(nil)
+  
+      minus_files = [] 
+      a.map do |c|
+        plugin_dirs << c.name if c.modifier.nil? || c.modifier == '+'
+        plugin_dirs -= [c.name] if c.modifier == '-' 
+        minus_files << c.name if c.modifier == '-'
+      end
+  
+      plugin_dirs.each do |d|
+        if File.directory?(d)
+          (Dir.glob("#{d}/*.rb") - minus_files).each { |x| PluginSupport.load_plugin(x) }
+        elsif File.exist?(d)
+          PluginSupport.load_plugin(d)
+        else
+          error("Error: #{d} is not Dir or File")
+        end
+      end
 
+      selected_plugin_names = []
+  
+      if b.map(&:modifier).include?(nil)
+        selected_plugin_names = []
+      else
+        selected_plugin_names = Plugin.registered_plugins.map { |n, _p| n.downcase }
+      end
+  
+      b.map do |c|
+        selected_plugin_names << c.name if c.modifier.nil? || c.modifier == '+'
+        selected_plugin_names -= [c.name] if c.modifier == '-'
+      end
+  
+  
+      plugins_to_use = Plugin.registered_plugins.map do |n, p|
+        [n, p] if selected_plugin_names.include?(n.downcase)
+      end.compact
 
+      unfound_plugins = selected_plugin_names - plugins_to_use.map { |n, _p| n.downcase }
+      unless unfound_plugins.empty?
+        puts 'Error: The following plugins were not found: ' + unfound_plugins.join(',')
+      end
+  
+      plugins_to_use
+    end
+  
+    def self.custom_plugin(c, *option)
+      if option == ['grep']
+        plugin_name = 'Grep'
+  
+        matches = if c[0] == '/' && c[-1] == '/'
+
+                    "matches([:regexp=>/#{c[1..-2]}/])"
+                  else
+                    "matches([:text=>\"#{c}\"])"
+                  end
+      else
+
+        if c =~ /:(text|ghdb|md5|regexp|tagpattern)=>[\/'"].*/
+          matches = "matches([\{#{c}\}])"
+        end
+  
+        matches = "matches([#{c}])" if c =~ /\{.*\}/
+  
+        plugin_name = 'Custom-Plugin'
+  
+        abort("Invalid custom plugin syntax: #{c}") if matches.nil?
+      end
+  
+      custom = %(
+      Plugin.define do
+      name "#{plugin_name}"
+      authors ["Knight"]
+      description "User defined"
+      website "User defined"
+      end
+      )
+  
+      begin
+        pp custom if $verbose > 2
+        eval(custom)
+        true
+      rescue SyntaxError
+        error('Error: Cannot load custom plugin')
+        false
+      end
+    end
+  
+    def self.plugin_list
+      terminal_width = 80
+      puts 'Knight Plugin List'
+      puts
+      puts "Plugin" + " " * 24 + "Website"
+      puts '-' * terminal_width
+      Plugin.registered_plugins.sort_by { |a, _b| a.downcase }.each do |n, p|
+        next if n == "?" 
+  
+        line = "#{n}"
+        spaces = terminal_width - 50 - n.size
+        spaces = 1 if spaces <= 0
+        line += " " * spaces
+        line += p.website if p.website
+        puts line
+      end
+      puts '-' * terminal_width
+      puts
+      puts "Total: #{Plugin.registered_plugins.size} Plugins"
+      puts
+      puts 'Hint:'
+      puts 'For complete plugin descriptions use : knight --info-plugins <SEARCH>'
+      puts 'Use it without a search term for a complete description of all plugins.'
+      puts
+    end
+  
+    def self.plugin_dorks(plugin_name)
+      dorks = []
+  
+      Plugin.registered_plugins.each do |n, p|
+        if n.casecmp(plugin_name.downcase).zero?
+          pp "Google Dorks for #{n}:" if $verbose > 2
+          dorks << p.dorks unless p.dorks.empty?
+        end
+      end
+  
+      if !dorks.empty?
+        puts dorks
+      else
+        error('Google dork lookup failed: Invalid plugin name or no dorks available')
+      end
+    end
+  
+    def self.plugin_info(keywords = nil)
+      terminal_width = 80
+  
+      puts 'Knight Detailed Plugin List'
+      puts 'Searching for ' + keywords.join(',') unless keywords.empty?
+  
+      count = { plugins: 0, version_detection: 0, matches: 0, dorks: 0, aggressive: 0, passive: 0 }
+  
+      Plugin.registered_plugins.sort_by { |a, _b| a.downcase }.each do |name, plugin|
+        next if name == "?" 
+        dump = [name, plugin.authors, plugin.description, plugin.website, plugin.matches].flatten.compact.to_a.join.downcase
+  
+        next unless keywords.empty? || keywords.map { |k| dump.include?(k.downcase) }.compact.include?(true)
+        puts '=' * terminal_width
+        puts 'Plugin:'.ljust(16) + name
+        puts '-' * terminal_width
+  
+        if plugin.description
+          Helper::word_wrap(plugin.description, terminal_width - 16).each_with_index do |line, index|
+            if index == 0
+              print 'Description:'.ljust(16)
+            else
+              print ' ' * 16
+            end
+            puts line
+          end
+        else
+          puts 'Description:'.ljust(16) + '<Not defined>'
+        end
+  
+        puts 'Website:'.ljust(16) + (plugin.website || '<Not defined>')
+        puts
+  
+        authors = (if plugin.authors.empty?
+                     '<Not defined>'
+                   else
+                     plugin.authors.join(', ')
+                   end)
+        puts 'Authors:'.ljust(16) + authors
+  
+        puts 'Version:'.ljust(16) + (plugin.version || '<Not defined>')
+        puts
+        print 'Features:'.ljust(16)
+  
+        print "[#{plugin.matches.any? ? 'Yes' : 'No'}]".ljust(7) + 'Pattern Matching'
+  
+        if plugin.matches.any?
+          puts " (#{plugin.matches.size})"
+        else
+          puts
+        end
+  
+        puts ' ' * 16 + "[#{plugin.version_detection? ? 'Yes' : 'No'}]".ljust(7) + 'Version detection from pattern matching'
+        puts ' ' * 16 + "[#{plugin.passive ? 'Yes' : 'No'}]".ljust(7) + 'Function for passive matches'
+        puts ' ' * 16 + "[#{plugin.aggressive ? 'Yes' : 'No'}]".ljust(7) + 'Function for aggressive matches'
+  
+        count[:version_detection] += 1 if plugin.version_detection?
+        count[:passive] += 1 if plugin.passive
+        count[:aggressive] += 1 if plugin.aggressive
+  
+        print ' ' * 16 + "[#{plugin.dorks.any? ? 'Yes' : 'No'}]".ljust(7) + 'Google Dorks'
+        if plugin.dorks.empty?
+          puts
+        else
+          puts " (#{plugin.dorks.size})"
+        end
+  
+        puts
+  
+        unless plugin.dorks.empty?
+          puts 'Google Dorks:'
+          plugin.dorks.each_with_index do |dork, index|
+            puts "[#{index + 1}] #{dork}"
+          end
+          puts
+          count[:dorks] += plugin.dorks.size
+        end
+  
+        count[:matches] += plugin.matches.size if plugin.matches
+        count[:plugins] += 1
+      end
+  
+      puts '=' * terminal_width
+      puts "Total plugins: #{count[:plugins]}"
+      puts "Total plugins with version detection from pattern matching: #{count[:version_detection]}"
+      puts "Total patterns (regular expressions, text, MD5 hashes, etc): #{count[:matches]}"
+      puts "Total Google dorks: #{count[:dorks]}"
+      puts "Total aggressive functions: #{count[:aggressive]}"
+      puts "Total passive functions: #{count[:passive]}"
+      puts
+    end
+  end
+  
+  
+  class PluginChoice
+    attr_accessor :modifier, :type, :name
+  
+    def <=>(_s)
+      x = -1 if modifier.nil?
+      x = 0 if modifier == '+'
+      x = 1 if modifier == '-'
+      x
+    end
+  
+    def fill(s)
+      self.modifier = nil
+      self.modifier = s[0].chr if ['+', '-'].include?(s[0].chr)
+  
+      self.name = if modifier
+                    s[1..-1]
+                  else
+                    s
+                  end
+  
+      if File.exist?(File.expand_path(name))
+        self.type = 'file'
+        self.name = File.expand_path(name)
+      else
+        name.downcase!
+        self.type = 'plugin'
+      end
+    end
+  end
