@@ -43,11 +43,11 @@ namespace :rdoc do
 
   desc 'Generate documentation to doc/rdocs/index.html'
   Rake::RDocTask.new do |rd|
-    rd.title = 'WhatWeb'
+    rd.title = 'Knight'
     rd.rdoc_dir = 'doc/rdocs'
     rd.main = 'README.md'
     rd.rdoc_files.include(
-      'whatweb',
+      'knight',
       'lib/**/*\.rb')
     rd.options << '--line-numbers'
     rd.options << '--all'
