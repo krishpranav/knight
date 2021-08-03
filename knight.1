@@ -1,19 +1,19 @@
-.TH WHATWEB 1 "December 14th, 2020"
+.TH KNIGHT 1 "December 14th, 2020"
 .SH NAME
-WhatWeb \- Next generation Web scanner. Identify technologies used by websites.
+knight \- Next generation Web scanner. Identify technologies used by websites.
 .SH SYNOPSIS
-.B whatweb
+.B knight
 .RI [ options ] 
 .RI <URLs>
 
 .br
 .SH DESCRIPTION
 .PP
-WhatWeb identifies websites. It's goal is to answer the question, "What is that Website?". WhatWeb recognises web technologies including content management systems (CMS), blogging platforms, statistic/analytics packages, JavaScript libraries, web servers, and embedded devices. WhatWeb has over 1800 plugins, each to recognise something different. WhatWeb also identifies version numbers, email addresses, account ID's, web framework modules, SQL errors, and more.
+knight identifies websites. It's goal is to answer the question, "What is that Website?". knight recognises web technologies including content management systems (CMS), blogging platforms, statistic/analytics packages, JavaScript libraries, web servers, and embedded devices. knight has over 1800 plugins, each to recognise something different. knight also identifies version numbers, email addresses, account ID's, web framework modules, SQL errors, and more.
 
-WhatWeb can be stealthy and fast, or thorough but slow. WhatWeb supports an aggression level to control the trade off between speed and reliability. When you visit a website in your browser, the transaction includes many hints of what web technologies are powering that website. Sometimes a single webpage visit contains enough information to identify a website but when it does not, WhatWeb can interrogate the website further. The default level of aggression, called 'passive', is the fastest and requires only one HTTP request of a website. This is suitable for scanning public websites. More aggressive modes were developed for in penetration tests.
+knight can be stealthy and fast, or thorough but slow. knight supports an aggression level to control the trade off between speed and reliability. When you visit a website in your browser, the transaction includes many hints of what web technologies are powering that website. Sometimes a single webpage visit contains enough information to identify a website but when it does not, knight can interrogate the website further. The default level of aggression, called 'passive', is the fastest and requires only one HTTP request of a website. This is suitable for scanning public websites. More aggressive modes were developed for in penetration tests.
 
-Most WhatWeb plugins are thorough and recognise a range of cues from subtle to obvious. For example, most WordPress websites can be identified by the meta HTML tag, e.g. '<meta name="generator" content="WordPress 2.6.5">', but a minority of WordPress websites remove this identifying tag but this does not thwart WhatWeb. The WordPress WhatWeb plugin has over 15 tests, which include checking the favicon, default installation files, login pages, and checking for "/wp-content/" within relative links.
+Most knight plugins are thorough and recognise a range of cues from subtle to obvious. For example, most WordPress websites can be identified by the meta HTML tag, e.g. '<meta name="generator" content="WordPress 2.6.5">', but a minority of WordPress websites remove this identifying tag but this does not thwart knight. The WordPress knight plugin has over 15 tests, which include checking the favicon, default installation files, login pages, and checking for "/wp-content/" within relative links.
 
 .TP
 .B
@@ -78,7 +78,7 @@ Set the aggression level. Default: 1.
 .SH HTTP OPTIONS
 .TP
 .B  \-\-user-agent, \-U=AGENT
-Identify as AGENT instead of WhatWeb/0.4.9.
+Identify as AGENT instead of knight/0.4.9.
 .TP
 .B  \-\-header, \-H
 Add an HTTP header. eg "Foo:Bar". Specifying a default header will replace it. Specifying an empty value, e.g. "User-Agent:" will remove it.
@@ -198,7 +198,7 @@ Log Ruby object inspection format.
 Name of the MongoDB database.
 .TP
 .B  \-\-log\-mongo\-collection
-Name of the MongoDB collection. Default: whatweb.
+Name of the MongoDB collection. Default: knight.
 .TP
 .B  \-\-log\-mongo\-host
 MongoDB hostname or IP address. Default: 0.0.0.0.
@@ -210,7 +210,7 @@ MongoDB username. Default: nil.
 MongoDB password. Default: nil.
 .TP
 .B  \-\-log\-elastic\-index
-Name of the index to store results. Default: whatweb 
+Name of the index to store results. Default: knight 
 .TP
 .B  \-\-log\-elastic\-host
 Host:port of the elastic http interface. Default: 127.0.0.1:9200s
@@ -247,33 +247,30 @@ Display version information.
 .SH EXAMPLE USAGE
 .TP
 .B Scan example.com.
- ./whatweb example.com
+ ./knight example.com
 .TP
 .B Scan reddit.com slashdot.org with verbose plugin descriptions.
- ./whatweb -v reddit.com slashdot.org
+ ./knight -v reddit.com slashdot.org
 .TP
 .B An aggressive scan of wired.com detects the exact version of WordPress.
- ./whatweb -a 3 www.wired.com
+ ./knight -a 3 www.wired.com
 .TP
 .B Scan the local network quickly and suppress errors.
- whatweb --no-errors 192.168.0.0/24
+ knight --no-errors 192.168.0.0/24
 .TP
 .B Scan the local network for https websites.
- whatweb --no-errors --url-prefix https://192.168.0.0/24
+ knight --no-errors --url-prefix https://192.168.0.0/24
 .TP
 .B Scan for crossdomain policies in the Alexa Top 1000.
- ./whatweb -i plugin-development/alexa-top-100.txt --url-suffix /crossdomain.xml -p crossdomain_xml
+ ./knight -i plugin-development/alexa-top-100.txt --url-suffix /crossdomain.xml -p crossdomain_xml
 
 
 .SH BUGS
-Report bugs and feature requests to https://github.com/urbanadventurer/WhatWeb
+Report bugs and feature requests to https://github.com/krishpranav/knight
 
 .SH AUTHOR
-Developed by Andrew Horton (urbanadventurer) and Brendan Coles (bcoles).
-
-.SH HOMEPAGE
-https://morningstarsecurity.com/research/whatweb
+Developed by krisna pranav
 
 .SH SOURCECODE
-https://github.com/urbanadventurer/WhatWeb/
+https://github.com/krishpranav/knight/
 .PP
