@@ -1,0 +1,9 @@
+compat.version=2.0
+
+errno.backtrace=true
+backtrace.color=true
+backtrace.style=mri
+
+jit.max=16384
+
+compile.fastest=true
